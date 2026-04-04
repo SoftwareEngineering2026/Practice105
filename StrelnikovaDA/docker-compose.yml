@@ -1,0 +1,48 @@
+services:
+  gateway:
+    build: ./gateway
+    ports:
+      - "8080:80"
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - spellcheck-net
+
+  frontend:
+    build: ./frontend
+    expose:
+      - "80"
+    networks:
+      - spellcheck-net
+
+  backend:
+    build: ./backend
+    environment:
+      WORKER_URL: http://worker:8001
+      REQUEST_TIMEOUT_SECONDS: 10
+    expose:
+      - "8000"
+    depends_on:
+      - worker
+    networks:
+      - spellcheck-net
+
+  worker:
+    build: ./worker
+    environment:
+      DB_PATH: /data/tasks.db
+      SPELLCHECK_DELAY_SECONDS: 3
+    expose:
+      - "8001"
+    volumes:
+      - worker-data:/data
+    networks:
+      - spellcheck-net
+
+networks:
+  spellcheck-net:
+    driver: bridge
+
+volumes:
+  worker-data:
