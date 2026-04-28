@@ -1,0 +1,36 @@
+services:
+
+  gateway:
+    build: ./gateway
+    ports:
+      - "8080:80"
+    networks:
+      - internal
+    depends_on:
+      - frontend
+      - backend
+
+  frontend:
+    build: ./frontend
+    networks:
+      - internal
+  
+  backend:
+    build:
+      context: ./backend
+      network: host
+    networks:
+      - internal
+    depends_on:
+      - worker
+
+  worker:
+    build:
+      context: ./worker
+      network: host
+    networks:
+      - internal
+
+networks:
+  internal:
+    driver: bridge

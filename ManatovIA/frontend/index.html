@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Генератор паролей</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    .card { background: #1e293b; border-radius: 12px; padding: 2rem; width: 480px; box-shadow: 0 4px 24px #0008; }
+    h1 { font-size: 1.5rem; margin-bottom: 1.5rem; color: #7dd3fc; }
+    .row { margin-bottom: 1rem; }
+    label { display: block; font-size: .875rem; color: #94a3b8; margin-bottom: .3rem; }
+    input[type=number] { width: 100%; padding: .5rem .75rem; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: #e2e8f0; font-size: 1rem; }
+    .checks { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+    .checks label { display: flex; align-items: center; gap: .4rem; color: #e2e8f0; font-size: .9rem; cursor: pointer; }
+    button { width: 100%; padding: .75rem; border-radius: 8px; border: none; background: #3b82f6; color: #fff; font-size: 1rem; font-weight: 600; cursor: pointer; margin-top: .5rem; }
+    button:disabled { background: #1e40af; cursor: not-allowed; }
+    #status { margin-top: 1.25rem; font-size: .9rem; color: #94a3b8; min-height: 1.2rem; }
+    #results { margin-top: 1rem; }
+    .pwd-item { background: #0f172a; border-radius: 6px; padding: .6rem .9rem; margin-bottom: .5rem; display: flex; justify-content: space-between; align-items: center; font-family: monospace; font-size: .95rem; }
+    .badge { font-size: .75rem; padding: .2rem .55rem; border-radius: 999px; font-family: system-ui; font-weight: 600; }
+    .badge.weak   { background: #7f1d1d; color: #fca5a5; }
+    .badge.medium { background: #78350f; color: #fcd34d; }
+    .badge.strong { background: #14532d; color: #86efac; }
+    .copy-btn { background: none; border: 1px solid #334155; color: #94a3b8; padding: .2rem .5rem; border-radius: 4px; cursor: pointer; font-size: .75rem; width: auto; margin-top: 0; }
+    .copy-btn:hover { border-color: #7dd3fc; color: #7dd3fc; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <h1>🔐 Генератор паролей</h1>
+  <form id="form">
+    <div class="row">
+      <label>Длина пароля</label>
+      <input type="number" id="length" value="14" min="4" max="64">
+    </div>
+    <div class="row">
+      <label>Количество паролей</label>
+      <input type="number" id="count" value="5" min="1" max="20">
+    </div>
+    <div class="row">
+      <label>Символы</label>
+      <div class="checks">
+        <label><input type="checkbox" id="upper" checked> Заглавные (A-Z)</label>
+        <label><input type="checkbox" id="digits" checked> Цифры (0-9)</label>
+        <label><input type="checkbox" id="special"> Спецсимволы (!@#…)</label>
+      </div>
+    </div>
+    <button type="submit" id="btn">Сгенерировать</button>
+  </form>
+  <div id="status"></div>
+  <div id="results"></div>
+</div>
+
+<script>
+  const form = document.getElementById('form');
+  const btn = document.getElementById('btn');
+  const statusEl = document.getElementById('status');
+  const resultsEl = document.getElementById('results');
+  let pollTimer = null;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearInterval(pollTimer);
+    resultsEl.innerHTML = '';
+    btn.disabled = true;
+    statusEl.textContent = 'Отправляем задачу…';
+
+    const body = {
+      length:      parseInt(document.getElementById('length').value),
+      count:       parseInt(document.getElementById('count').value),
+      use_upper:   document.getElementById('upper').checked,
+      use_digits:  document.getElementById('digits').checked,
+      use_special: document.getElementById('special').checked,
+    };
+
+    const res = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const { task_id } = await res.json();
+
+    statusEl.textContent = 'Задача в очереди…';
+    poll(task_id);
+  });
+
+  function poll(task_id) {
+    pollTimer = setInterval(async () => {
+      const res = await fetch(`/api/status/${task_id}`);
+      const data = await res.json();
+
+      if (data.status === 'running') {
+        statusEl.textContent = 'Генерируем…';
+      } else if (data.status === 'done') {
+        clearInterval(pollTimer);
+        statusEl.textContent = `Готово — ${data.passwords.length} паролей`;
+        btn.disabled = false;
+        render(data.passwords);
+      }
+    }, 1000);
+  }
+
+  function render(passwords) {
+    resultsEl.innerHTML = '';
+    passwords.forEach(p => {
+      const item = document.createElement('div');
+      item.className = 'pwd-item';
+
+      const pwdSpan = document.createElement('span');
+      pwdSpan.textContent = p.password;
+
+      const controls = document.createElement('div');
+      controls.style.cssText = 'display:flex;gap:.5rem;align-items:center';
+
+      const badge = document.createElement('span');
+      badge.className = `badge ${p.strength}`;
+      badge.textContent = p.strength;
+
+      const copyBtn = document.createElement('button');
+      copyBtn.className = 'copy-btn';
+      copyBtn.textContent = 'copy';
+      copyBtn.addEventListener('click', () => navigator.clipboard.writeText(p.password));
+
+      controls.appendChild(badge);
+      controls.appendChild(copyBtn);
+      item.appendChild(pwdSpan);
+      item.appendChild(controls);
+      resultsEl.appendChild(item);
+    });
+  }
+</script>
+</body>
+</html>
