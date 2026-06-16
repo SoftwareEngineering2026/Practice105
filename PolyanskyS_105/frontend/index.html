@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>QR Code Generator</title>
+    <style>
+        body { font-family: Arial; max-width: 600px; margin: 50px auto; text-align: center; }
+        input, button { padding: 10px; margin: 5px; }
+        img { margin-top: 20px; border: 1px solid #ddd; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>📱 QR Code Generator</h1>
+    <input type="text" id="text" placeholder="Введите текст или URL" size="40">
+    <button onclick="generateQR()">Сгенерировать QR</button>
+    <br>
+    <div id="result"></div>
+
+    <script>
+        async function generateQR() {
+            const text = document.getElementById('text').value;
+            if (!text) {
+                alert('Введите текст!');
+                return;
+            }
+
+            const response = await fetch('/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text })
+            });
+
+            const data = await response.json();
+            document.getElementById('result').innerHTML = 
+                `<h3>Ваш QR-код:</h3><img src="data:image/png;base64,${data.qr}" />`;
+        }
+    </script>
+</body>
+</html>
