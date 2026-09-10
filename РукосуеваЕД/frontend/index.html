@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Генератор аватарок по имени</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="card">
+    <h1>Генератор аватарок</h1>
+    <p>Введите имя — и получите аватар с инициалами на цветном фоне.</p>
+
+    <form id="avatar-form">
+      <input type="text" id="name-input" placeholder="Например: Екатерина Рукосуева" required />
+      <button type="submit">Сгенерировать</button>
+    </form>
+
+    <div id="status" class="status"></div>
+    <div id="result"></div>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
