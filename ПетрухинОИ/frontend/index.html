@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Анализ текста — Лабораторная работа №105</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main class="container">
+    <section class="card">
+      <p class="eyebrow">Лабораторная работа №105</p>
+      <h1>Асинхронный анализ текста</h1>
+      <p class="description">Текст передаётся в Backend, задача ставится в очередь Redis, а отдельный Worker выполняет анализ и возвращает результат.</p>
+      <label for="textInput">Текст для анализа</label>
+      <textarea id="textInput" rows="10" maxlength="50000" placeholder="Введите несколько предложений..."></textarea>
+      <div class="actions">
+        <button id="submitButton">Запустить анализ</button>
+        <span id="charCount">0 / 50000</span>
+      </div>
+      <div id="message" class="message hidden"></div>
+      <section id="resultSection" class="result hidden">
+        <h2>Результат</h2>
+        <div class="status-row"><span>Идентификатор задачи:</span><code id="taskId">—</code></div>
+        <div class="status-row"><span>Статус:</span><strong id="taskStatus">—</strong></div>
+        <pre id="resultOutput"></pre>
+      </section>
+    </section>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>

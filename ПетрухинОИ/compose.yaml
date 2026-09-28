@@ -1,0 +1,102 @@
+services:
+  gateway:
+    image: nginx:1.27-alpine
+    container_name: practice105-gateway
+    ports:
+      - "${APP_PORT:-8080}:80"
+    volumes:
+      - ./gateway/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      frontend:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://127.0.0.1/ || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  frontend:
+    build: ./frontend
+    container_name: practice105-frontend
+    expose:
+      - "80"
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://127.0.0.1/ || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  backend:
+    build: ./backend
+    container_name: practice105-backend
+    expose:
+      - "8000"
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      TASK_QUEUE: task_queue
+      TASK_TTL_SECONDS: "3600"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=2)"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  worker:
+    build: ./worker
+    container_name: practice105-worker
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      TASK_QUEUE: task_queue
+      RESULT_TTL_SECONDS: "3600"
+      HEARTBEAT_KEY: worker:heartbeat
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os,time,redis; r=redis.Redis(host=os.getenv('REDIS_HOST','redis'),port=int(os.getenv('REDIS_PORT','6379')),decode_responses=True); ts=r.get(os.getenv('HEARTBEAT_KEY','worker:heartbeat')); raise SystemExit(0 if ts and time.time()-float(ts)<30 else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  redis:
+    image: redis:7-alpine
+    container_name: practice105-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    expose:
+      - "6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+volumes:
+  redis_data:
+
+networks:
+  app_network:
+    driver: bridge
